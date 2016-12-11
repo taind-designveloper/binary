@@ -67,7 +67,40 @@ public class BinaryRouter extends ActiveRouter {
 
 		tryOtherMessages();
 	}
-	// Calculate existence value
+	
+	/*
+	 * which message should be drop when buffer is full
+	 * */
+	@Override
+	protected Message getNextMessageToRemove(boolean excludeMsgBeingSent) {
+		Collection<Message> messages = this.getMessageCollection();
+		List<Message> validMessages = new ArrayList<Message>();
+
+		for (Message m : messages) {
+			if (excludeMsgBeingSent && isSending(m.getId())) {
+				continue; // skip the message(s) that router is sending
+			}
+			validMessages.add(m);
+		}
+		
+		Comparator<Message> binaryComparator = new Comparator<Message>() {
+			public int compare(Message m1, Message m2) {
+				BinaryRouter router = (BinaryRouter) getHost().getRouter();
+				Double repPath1 = router.repPaths.get(m1.getId());
+				Double repPath2 = router.repPaths.get(m2.getId());
+				if ( repPath1 == null) repPath1 = 0.0;
+				if ( repPath2 == null) repPath2 = 0.0;
+				if( repPath1 - repPath2 >= 0) return -1;
+				return 1;
+			}
+		};
+		Collections.sort(validMessages, binaryComparator);
+		return validMessages.get(validMessages.size()-1); // return last message
+	}
+	
+	/*
+	 * calculate meeting time and LAMDA value
+	 * */
 	@Override
 	public void changedConnection(Connection con) {
 		super.changedConnection(con);
@@ -79,6 +112,14 @@ public class BinaryRouter extends ActiveRouter {
 				this.interContactTimes.add(interContactTime);
 				this.Flags.remove(key);
 			}
+			// calculate LAMDA
+			if (this.interContactTimes.size() > 0) {
+				Double sum = 0.0;
+				for(Double i: this.interContactTimes) {
+					sum += i;
+				}
+				this.lamda = this.interContactTimes.size() / sum;
+			}
 			
 		} else {
 			if(this.Flags.containsKey(key)) {
@@ -87,7 +128,10 @@ public class BinaryRouter extends ActiveRouter {
 			this.Flags.put(key, SimClock.getTime());
 		}
 	}
-	// Detect Message is sent or not
+	
+	/*
+	 * Count the numer of sent messages
+	 * */
 	@Override
 	public Message messageTransferred(String id, DTNHost from) {
 		Message m = super.messageTransferred(id, from);
@@ -120,21 +164,13 @@ public class BinaryRouter extends ActiveRouter {
 		}
 	}
 	/*
-	 * try to send a message to 2 nodes at max 
 	 * then remove current message from current node
 	 * */
 	private Tuple<Message, Connection> tryOtherMessages() {
 		List<Tuple<Message, Connection>> messages = new ArrayList<Tuple<Message, Connection>>();
 
 		Collection<Message> msgCollection = getMessageCollection();
-		// calculate LAMDA
-		if (this.interContactTimes.size() > 0) {
-			Double sum = 0.0;
-			for(Double i: this.interContactTimes) {
-				sum += i;
-			}
-			this.lamda = this.interContactTimes.size() / sum;
-		}
+
 		// calculate PR = 1/( 1 - e^(-LAMDA * R + n))
 		for (Message m: getMessageCollection()) {	
 			if(this.lamda != null) {
