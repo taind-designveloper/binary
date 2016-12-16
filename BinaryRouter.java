@@ -71,32 +71,32 @@ public class BinaryRouter extends ActiveRouter {
 	/*
 	 * which message should be drop when buffer is full
 	 * */
-	@Override
-	protected Message getNextMessageToRemove(boolean excludeMsgBeingSent) {
-		Collection<Message> messages = this.getMessageCollection();
-		List<Message> validMessages = new ArrayList<Message>();
-
-		for (Message m : messages) {
-			if (excludeMsgBeingSent && isSending(m.getId())) {
-				continue; // skip the message(s) that router is sending
-			}
-			validMessages.add(m);
-		}
-		
-		Comparator<Message> binaryComparator = new Comparator<Message>() {
-			public int compare(Message m1, Message m2) {
-				BinaryRouter router = (BinaryRouter) getHost().getRouter();
-				Double repPath1 = router.repPaths.get(m1.getId());
-				Double repPath2 = router.repPaths.get(m2.getId());
-				if ( repPath1 == null) repPath1 = 0.0;
-				if ( repPath2 == null) repPath2 = 0.0;
-				if( repPath1 - repPath2 >= 0) return -1;
-				return 1;
-			}
-		};
-		Collections.sort(validMessages, binaryComparator);
-		return validMessages.get(validMessages.size()-1); // return last message
-	}
+//	@Override
+//	protected Message getNextMessageToRemove(boolean excludeMsgBeingSent) {
+//		Collection<Message> messages = this.getMessageCollection();
+//		List<Message> validMessages = new ArrayList<Message>();
+//
+//		for (Message m : messages) {
+//			if (excludeMsgBeingSent && isSending(m.getId())) {
+//				continue; // skip the message(s) that router is sending
+//			}
+//			validMessages.add(m);
+//		}
+//		
+//		Comparator<Message> binaryComparator = new Comparator<Message>() {
+//			public int compare(Message m1, Message m2) {
+//				BinaryRouter router = (BinaryRouter) getHost().getRouter();
+//				Double repPath1 = router.repPaths.get(m1.getId());
+//				Double repPath2 = router.repPaths.get(m2.getId());
+//				if ( repPath1 == null) repPath1 = 0.0;
+//				if ( repPath2 == null) repPath2 = 0.0;
+//				if( repPath1 - repPath2 >= 0) return -1;
+//				return 1;
+//			}
+//		};
+//		Collections.sort(validMessages, binaryComparator);
+//		return validMessages.get(validMessages.size()-1); // return last message
+//	}
 	
 	/*
 	 * calculate meeting time and LAMDA value
@@ -104,7 +104,7 @@ public class BinaryRouter extends ActiveRouter {
 	@Override
 	public void changedConnection(Connection con) {
 		super.changedConnection(con);
-		String key = getHost().toString() + con.getOtherNode(getHost()).toString();
+		String key = con.getOtherNode(getHost()).toString();
 		if (con.isUp()) {
 			
 			if (this.Flags.containsKey(key)) {
@@ -209,7 +209,7 @@ public class BinaryRouter extends ActiveRouter {
 			return null;
 		}
 		
-		Collections.sort(messages, new TupleComparator());
+		//Collections.sort(messages, new TupleComparator());
 		return tryMessagesForConnected(messages);	// try to send messages
 	}
 	
